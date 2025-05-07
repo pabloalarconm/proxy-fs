@@ -1,0 +1,11 @@
+version: '3'
+services:
+  api:
+    image: pabloalarconm/proxy-fs:0.0.1
+    ports:
+      - "8000:8000"
+    environment:
+      - AUTH_URL=https://dev-api.fairsharing.org/users/sign_in
+      - DATA_URL=https://dev-api.fairsharing.org/fairsharing_records/
+      - USERNAME=pabloalarconm
+      - PASSWORD=
