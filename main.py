@@ -11,8 +11,8 @@ app = FastAPI()
 # Configuration
 # AUTH_URL = "https://dev-api.fairsharing.org/users/sign_in"
 # DATA_URL = "https://dev-api.fairsharing.org/fairsharing_records/"
-# USERNAME = "pabloalarconm"
-# PASSWORD = "Trendelamina11Trendelamina11"
+# USERNAME = ""
+# PASSWORD = ""
 
 AUTH_URL = os.getenv("AUTH_URL")
 DATA_URL =os.getenv("DATA_URL")
