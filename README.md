@@ -12,7 +12,7 @@ Update the environment variables with your **FAIRsharing user credentials**. Als
 version: '3'
 services:
   api:
-    image: pabloalarconm/proxy-fs:0.0.1
+    image: pabloalarconm/proxy-fs:0.0.3
     ports:
       - "8000:8000"
     environment:
@@ -34,55 +34,62 @@ services:
 
 | Method | Path      | Description                                       |
 | ------ | --------- | ------------------------------------------------- |
-| GET    | `/docs`   | Opens interactive API documentation (Swagger UI). |
-| POST   | `/submit` | Submits a FAIRsharing record.                     |
+| GET    | `/questionnaire/docs`   | Opens interactive API documentation (Swagger UI). |
+| POST   | `/questionnaire/submit` | Submits a FAIRsharing record.                     |
 
 ### Accessing API Documentation
-Navigate to http://localhost:8000/docs to explore and test the API interactively via Swagger UI.
+Navigate to http://localhost:8000/questionnaire/docs to explore and test the API interactively via Swagger UI.
 
 ### Submitting a FAIRsharing Record
 
 You can submit a record via API using `/submit`.
 ```
 curl -X 'POST' \
-  'http://localhost:8000/submit' \
+  'http://localhost:8000/questionnaire/submit' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
-    "fairsharing_record": {
-        "metadata": {
-            "name": "Benchmark trial",
-            "abbreviation": "benchmark",
-            "description": "Benchmark description",
-            "homepage": "https://fairsharing.org",
-            "contacts": [
-                {
-                    "contact_name": "Pablo Alarcón-Moreno",
-                    "contact_orcid": "0000-0001-5974-589X",
-                    "contact_email": "pablo@mail.com"
-                }
-            ]
-        },
-        "record_type_id": 16,
-        "subject_ids": [
-            511
-        ],
-        "domain_ids": [
-            1933,
-            1722,
-            1916
-        ],
-        "record_associations_attributes": [
-            {
-                "linked_record_id": "528",
-                "record_assoc_label_id": 14
-            },
-            {
-                "linked_record_id": "175",
-                "record_assoc_label_id": 14
-            }
-        ]
-    }
+  "fairsharing_record": {
+    "metadata": {
+      "name": "Healthcare Assessment Benchmark",
+      "abbreviation": "Bench55433",
+      "description": "Healthcare Assessment Benchmark information",
+      "homepage": "https://fairsharing.org",
+      "contacts": [
+        {
+          "contact_name": "Pablo Alarcón-Moreno",
+          "contact_orcid": "0000-0001-5974-589X",
+          "contact_email": "pabloalarconmoreno@gmail.com"
+        }
+      ],
+      "associated_tools": []
+    },
+    "record_type_id": 16,
+    "subject_ids": [1018],
+    "domain_ids": [2853, 2779],
+    "record_associations_attributes": [
+      {
+        "linked_record_id": 779,
+        "record_assoc_label_id": 14
+      },
+      {
+        "linked_record_id": 528,
+        "record_assoc_label_id": 14
+      },
+      {
+        "linked_record_id": 533,
+        "record_assoc_label_id": 14
+      }
+    ],
+    "object_type_ids": [8, 5],
+    "organisation_links_attributes": [
+      {
+        "relation": "maintains",
+        "is_lead": true,
+        "organisation_id": 2968
+      }
+    ]
+  }
 }'
 
 ```

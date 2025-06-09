@@ -4,14 +4,18 @@ import httpx
 import uvicorn
 import os
 
-from fsBaseModel import InputBody, FairsharingRecordRequest
+from fsBaseModel import FairsharingRecordRequest
 
-app = FastAPI()
+app = FastAPI(
+    docs_url="/questionnaire/docs",
+    redoc_url=None,
+    openapi_url="/questionnaire/openapi.json"
+)
 
 # Configuration
 # AUTH_URL = "https://dev-api.fairsharing.org/users/sign_in"
 # DATA_URL = "https://dev-api.fairsharing.org/fairsharing_records/"
-# USERNAME = ""
+# USERNAME = "pabloalarconm"
 # PASSWORD = ""
 
 AUTH_URL = os.getenv("AUTH_URL")
@@ -19,7 +23,11 @@ DATA_URL =os.getenv("DATA_URL")
 USERNAME = os.getenv("USERNAME")
 PASSWORD =os.getenv("PASSWORD")
 
-@app.post("/submit")
+@app.get("/questionnaire")
+async def health_check():
+    return {"status": "ok", "message": "API is running, check /questionnaire/docs for extra documentation"}
+
+@app.post("/questionnaire/submit")
 async def submit_record(body:FairsharingRecordRequest):
 
     # Step 1: Get JWT
