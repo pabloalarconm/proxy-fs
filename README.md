@@ -12,7 +12,7 @@ Update the environment variables with your **FAIRsharing user credentials**. Als
 version: '3'
 services:
   api:
-    image: pabloalarconm/proxy-fs:0.0.3
+    image: pabloalarconm/proxy-fs:0.0.4
     ports:
       - "8000:8000"
     environment:
@@ -20,6 +20,7 @@ services:
       - DATA_URL=https://dev-api.fairsharing.org/fairsharing_records/
       - USERNAME=*****
       - PASSWORD=*****
+      - GITHUB_TOKEN=*****
 ```
 
 ### Environment Variables Reference
@@ -29,20 +30,33 @@ services:
 | DATA\_URL | FAIRsharing submission endpoint.     |
 | USERNAME  | Your FAIRsharing username.           |
 | PASSWORD  | Your FAIRsharing password.           |
+| GITHUB_TOKEN  | Your Github access token.        |
 
 ## API Endpoints
 
 | Method | Path      | Description                                       |
 | ------ | --------- | ------------------------------------------------- |
-| GET    | `/questionnaire/docs`   | Opens interactive API documentation (Swagger UI). |
-| POST   | `/questionnaire/submit` | Submits a FAIRsharing record.                     |
+| GET    | `/questionnaire/docs`   | Opens interactive API documentation (Swagger UI).        |
+| POST   | `/questionnaire/submit` | Submits a FAIRsharing record.                            |
+| POST   | `/questionnaire/push`   | Git push a Github record with your RDF DCAT-based record |
+
 
 ### Accessing API Documentation
-Navigate to http://localhost:8000/questionnaire/docs to explore and test the API interactively via Swagger UI.
+Navigate to http://YOUR_DOMAIN/questionnaire/docs to explore and test the API interactively via Swagger UI.
+
+### Submitting a Github Record
+
+Find and example RDF DCAT-based record at [example.ttl](/proxy-fs/example.ttl)
+
+You can submit a record via API using `/push`:
+
+curl -X POST http://localhost:8000/questionnaire/push \
+     -H "Content-Type: text/turtle" \
+     --data-binary @example.ttl
 
 ### Submitting a FAIRsharing Record
 
-You can submit a record via API using `/submit`.
+You can submit a record via API using `/submit`:
 ```
 curl -X 'POST' \
   'http://localhost:8000/questionnaire/submit' \
@@ -52,7 +66,7 @@ curl -X 'POST' \
   "fairsharing_record": {
     "metadata": {
       "name": "Healthcare Assessment Benchmark",
-      "abbreviation": "Bench55433",
+      "abbreviation": "BenchHealthAssess",
       "description": "Healthcare Assessment Benchmark information",
       "homepage": "https://fairsharing.org",
       "contacts": [
