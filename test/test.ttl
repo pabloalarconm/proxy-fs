@@ -1,0 +1,49 @@
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix vcard: <http://www.w3.org/2006/vcard/ns#> .
+@prefix ftr: <https://w3id.org/ftr#> .
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix doap: <http://usefulinc.com/ns/doap#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dqv: <http://www.w3.org/ns/dqv#> .
+@prefix vivo: <http://vivoweb.org/ontology/core#> .
+@prefix dpv: <https://w3id.org/dpv#> .
+@prefix sio: <http://semanticscience.org/resource/> .
+@prefix adms: <http://www.w3.org/ns/adms#> .
+
+<https://ostrails.github.io/assessment-component-metadata-records/test/TestLicense.ttl> a ftr:Test, dcat:DataService ;
+    dcterms:identifier "https://ostrails.github.io/assessment-component-metadata-records/test/TestLicense.ttl"^^xsd:string ;
+    dcterms:title "FAIR Test - License"^^xsd:string ;
+    rdfs:label "TestLicense"^^xsd:string ;
+    vivo:abbreviation "TestLicense"^^xsd:string ;
+    dcterms:description """FAIR Test - License description"""^^xsd:string ;
+    dcat:keyword "FAIR"^^xsd:string, "TestKeyword"^^xsd:string, "Testkeyword2"^^xsd:string ;
+    ftr:applicationArea <http://purl.obolibrary.org/obo/NCIT_C17039> ;
+    dcat:version "0.0.1"^^xsd:string ;
+    adms:versionNotes "TestLicense"^^xsd:string ;
+    dcterms:license <http://creativecommons.org/licenses/by/4.0/> ;
+    ftr:status "Active"@en ;
+    dcat:landingPage <http://purl.obolibrary.org/LANDINGPAGE> ;
+    dcat:endpointURL <http://creativecommons.org/licenses/by/4.0/endpont> ;
+    dcat:endpointDescription <http://creativecommons.org/licenses/by/4.0/endpontdescription> ;
+    
+    doap:repository <http://creativecommons.org/licenses/by/4.0/repo> ;
+    ftr:supportedBy  <https://creativecommons.org/tool>; 
+    dpv:IsApplicableFor <https://schema.org/MediaObject>, <http://semanticscience.org/resource/SIO_000510>;
+    dcterms:creator <https://ror.org/05rdf8595>; 
+    sio:SIO_000233 <https://doi.org/10.25504/FAIRsharing.DfMGZW> ;
+    dcat:contactPoint  <https://orcid.org/0000-0001-5974-589X>  . 
+
+
+<https://ror.org/05rdf8595> a vcard:Organisation ;
+    vcard:organisation-name "Universidade de Vigo"^^xsd:string .
+
+<https://orcid.org/0000-0001-5974-589X> a vcard:Individual ;
+    vcard:fn "Pablo Alarcón-Moreno"^^xsd:string ;
+    vcard:hasEmail <mailto:pablo@upm.es> .
+
+<https://doi.org/10.25504/FAIRsharing.DfMGZW> a dqv:Metric ;
+    rdfs:label "FAIR Metric - FAIR Maturity Indicator -  Open protocol for (meta)data retrieval - Gen2-MI-A1.1"^^xsd:string ;
+
+    dcterms:identifier "10.25504/FAIRsharing.DfMGZW"^^xsd:string .

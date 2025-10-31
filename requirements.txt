@@ -6,3 +6,4 @@ chevron==0.14.0
 requests==2.32.3
 httpx==0.28.1
 rdflib
+asyncio

@@ -1,27 +1,30 @@
-# OSTrials Proxy for FAIRsharing and FAIRWizard
+# OSTrials Proxy for FAIR Wizard Authoring Tool
 
-This service acts as a **proxy API** to authenticate and submit FAIRsharing records on behalf of a user, facilitating integration with external tools like **FAIRWizard questionnaire for FAIR assessment components**.
+This service acts as a **proxy API** to authenticate and submit FAIR assessment components comming from [**FAIR Wizard authoring tool**](https://ostrails-fair.fair-wizard.com/wizard/) on behalf of a user, facilitating integration with external tools like:
 
----
+ - **FAIRsharing**
+ - **OSTrails Github assessment metadata repository**
+ - **FAIR Data Point**
 
 ## Start with Docker
-
-Update the environment variables with your **FAIRsharing user credentials**. Also, you can modify URLs to change from dev to production:
 
 ```yaml
 version: '3'
 services:
   api:
-    image: pabloalarconm/proxy-fs:0.0.4
+    image: pabloalarconm/proxy-fs:1.0.0
     ports:
       - "8000:8000"
     environment:
-      - AUTH_URL=https://dev-api.fairsharing.org/users/sign_in
-      - DATA_URL=https://dev-api.fairsharing.org/fairsharing_records/
+      - AUTH_URL=https://api.fairsharing.org/users/sign_in
+      - DATA_URL=https://api.fairsharing.org/fairsharing_records/
       - USERNAME=*****
       - PASSWORD=*****
       - GITHUB_TOKEN=*****
 ```
+> **Note:** Update the environment variables with your **FAIRsharing user credentials**. Also, you can modify URLs to change from dev to production
+---
+
 
 ### Environment Variables Reference
 | Variable  | Description                          |
@@ -38,72 +41,16 @@ services:
 | ------ | --------- | ------------------------------------------------- |
 | GET    | `/questionnaire/docs`   | Opens interactive API documentation (Swagger UI).        |
 | POST   | `/questionnaire/submit` | Submits a FAIRsharing record.                            |
-| POST   | `/questionnaire/push`   | Git push a Github record with your RDF DCAT-based record |
+| POST   | `/questionnaire/push`   | Git push a Github record and FDP test registration with your RDF DCAT-based record |
 
 
 ### Accessing API Documentation
 Navigate to http://YOUR_DOMAIN/questionnaire/docs to explore and test the API interactively via Swagger UI.
 
-### Submitting a Github Record
+### Submitting a Github and FDP Record
 
-Find and example RDF DCAT-based record at [example.ttl](/proxy-fs/example.ttl)
-
-You can submit a record via API using `/push`:
-
-curl -X POST http://localhost:8000/questionnaire/push \
-     -H "Content-Type: text/turtle" \
-     --data-binary @example.ttl
+Find an example of a RDF DCAT-based record submission in Github and FDP [here](/proxy-fs/test/exploit_test.sh) via API using `/push`.
 
 ### Submitting a FAIRsharing Record
 
-You can submit a record via API using `/submit`:
-```
-curl -X 'POST' \
-  'http://localhost:8000/questionnaire/submit' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "fairsharing_record": {
-    "metadata": {
-      "name": "Healthcare Assessment Benchmark",
-      "abbreviation": "BenchHealthAssess",
-      "description": "Healthcare Assessment Benchmark information",
-      "homepage": "https://fairsharing.org",
-      "contacts": [
-        {
-          "contact_name": "Pablo Alarcón-Moreno",
-          "contact_orcid": "0000-0001-5974-589X",
-          "contact_email": "pabloalarconmoreno@gmail.com"
-        }
-      ],
-      "associated_tools": []
-    },
-    "record_type_id": 16,
-    "subject_ids": [1018],
-    "domain_ids": [2853, 2779],
-    "record_associations_attributes": [
-      {
-        "linked_record_id": 779,
-        "record_assoc_label_id": 14
-      },
-      {
-        "linked_record_id": 528,
-        "record_assoc_label_id": 14
-      },
-      {
-        "linked_record_id": 533,
-        "record_assoc_label_id": 14
-      }
-    ],
-    "object_type_ids": [8, 5],
-    "organisation_links_attributes": [
-      {
-        "relation": "maintains",
-        "is_lead": true,
-        "organisation_id": 2968
-      }
-    ]
-  }
-}'
-
-```
+Find an example of a FAIRsharing record submission [here](/proxy-fs/test/exploit_test.sh) via API using `/submit`.
