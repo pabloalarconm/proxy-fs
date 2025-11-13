@@ -1,22 +1,26 @@
-import httpx, uvicorn, os, base64, json, re, asyncio
+import httpx, uvicorn, os, base64, re, traceback
 from fastapi import HTTPException, FastAPI, Request
+from fastapi.responses import JSONResponse
 from rdflib import Graph, URIRef, Literal, Namespace
 from urllib.parse import urlparse
-from rdflib.namespace import DCTERMS, XSD
+from rdflib.namespace import DCTERMS
 
 from fsBaseModel import FairsharingRecordRequest
 
 app = FastAPI(
+    title="FAIRsharing Questionnaire API",
+    description="API for processing and submitting RDF metadata records to GitHub and FAIRsharing.",
+    version="1.2.0",
     docs_url="/questionnaire/docs",
     redoc_url=None,
     openapi_url="/questionnaire/openapi.json",
 )
 
-@app.get("/questionnaire/")
+@app.get("/questionnaire/", summary="Health check", description="Verify that the API is running correctly.")
 async def health_check():
     return {
         "status": "ok",
-        "message": "API is running, check /questionnaire/docs for extra documentation",
+        "message": "API is running. See /questionnaire/docs for interactive documentation.",
     }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -40,18 +44,19 @@ DCTERMS = Namespace("http://purl.org/dc/terms/")
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Helper: Extract record_id, category, and uri_candidate
+# Helper functions
 # ═══════════════════════════════════════════════════════════════════
 def _extract_record_info(rdf_text: str):
+    """Extract record_id, category, and URI from RDF Turtle content."""
     g = Graph()
-    g.parse(data=rdf_text, format="turtle")
+    try:
+        g.parse(data=rdf_text, format="turtle")
+    except Exception as e:
+        raise HTTPException(400, f"Invalid RDF format: {e}")
 
     uri_candidate = None
     for _, _, o in g.triples((None, DCTERMS.identifier, None)):
-        if isinstance(o, URIRef):
-            uri_candidate = str(o)
-            break
-        elif isinstance(o, Literal) and (o.datatype in (None, XSD.string)):
+        if isinstance(o, (URIRef, Literal)):
             uri_candidate = str(o)
             break
 
@@ -62,11 +67,11 @@ def _extract_record_info(rdf_text: str):
                 break
 
     if uri_candidate is None:
-        return None
+        raise HTTPException(400, "No valid identifier or subject URI found in RDF.")
 
     path_parts = [p for p in urlparse(uri_candidate).path.split("/") if p]
     if len(path_parts) < 2:
-        return None
+        raise HTTPException(400, f"URI '{uri_candidate}' is malformed or missing path structure.")
 
     filename = path_parts[-1]
     category = path_parts[-2]
@@ -76,17 +81,14 @@ def _extract_record_info(rdf_text: str):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 1. Commit RDF to GitHub, return commit SHA and info
+# GitHub Commit Function
 # ═══════════════════════════════════════════════════════════════════
 async def commit_rdf_to_github(client: httpx.AsyncClient, rdf_text: str):
+    """Commit or update an RDF Turtle record into the GitHub repository."""
     if not all([GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO]):
-        raise HTTPException(500, "GitHub env vars missing")
+        raise HTTPException(500, "GitHub credentials or configuration missing.")
 
-    info = _extract_record_info(rdf_text)
-    if info is None:
-        raise HTTPException(400, "Unable to find identifier URI inside RDF.")
-    record_id, category, uri_candidate = info
-
+    record_id, category, uri_candidate = _extract_record_info(rdf_text)
     path = f"{category.rstrip('/')}/{record_id}.ttl"
     url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/contents/{path}"
     headers = {
@@ -94,113 +96,89 @@ async def commit_rdf_to_github(client: httpx.AsyncClient, rdf_text: str):
         "Accept": "application/vnd.github+json",
     }
 
-    # Check if file exists
-    sha = None
-    pre = await client.get(url, headers=headers)
-    if pre.status_code == 200:
-        sha = pre.json().get("sha")
-    elif pre.status_code not in (404,):
-        raise HTTPException(500, f"GitHub pre-flight failed: {pre.text}")
-
-    # Create or update file
-    payload = {
-        "message": f"Add/update RDF for record {record_id}",
-        "content": base64.b64encode(rdf_text.encode()).decode(),
-        "branch": GITHUB_BRANCH,
-        **({"sha": sha} if sha else {}),
-    }
-
-    put = await client.put(url, headers=headers, json=payload)
     try:
+        sha = None
+        pre = await client.get(url, headers=headers)
+        if pre.status_code == 200:
+            sha = pre.json().get("sha")
+        elif pre.status_code not in (404,):
+            raise HTTPException(500, f"GitHub preflight failed: {pre.text}")
+
+        payload = {
+            "message": f"Add or update RDF record '{record_id}' in category '{category}'.",
+            "content": base64.b64encode(rdf_text.encode()).decode(),
+            "branch": GITHUB_BRANCH,
+            **({"sha": sha} if sha else {}),
+        }
+
+        put = await client.put(url, headers=headers, json=payload)
         put.raise_for_status()
-    except httpx.HTTPError:
-        raise HTTPException(500, f"GitHub commit failed: {put.text}")
 
-    commit_sha = put.json()["content"]["sha"]
-    return record_id, category, uri_candidate, url, commit_sha
+        commit_data = put.json()
+        return {
+            "status": "success",
+            "action": "update" if sha else "create",
+            "record_id": record_id,
+            "category": category,
+            "commit_url": commit_data.get("commit", {}).get("html_url"),
+            "file_url": commit_data.get("content", {}).get("html_url"),
+            "message": (
+                f"RDF record '{record_id}' successfully {'updated' if sha else 'created'} "
+                f"in GitHub repository '{GITHUB_REPO}'."
+            ),
+        }
 
-
-# ═══════════════════════════════════════════════════════════════════
-# 2. Poll GitHub until new commit is visible -- This step at the end is not neccesary becuase the commit is quite fast but the Github Pages are the one that take time to update. However I keep the function as a sanity check.
-# ═══════════════════════════════════════════════════════════════════
-async def wait_until_github_updated(client, url, headers, expected_sha, max_wait=10):
-    """
-    Polls GitHub until the committed file's SHA matches expected_sha.
-    Waits up to max_wait seconds total.
-    """
-    print(f"⏳ Waiting for GitHub to propagate commit {expected_sha[:7]}...")
-    
-    await asyncio.sleep(50) ## Neccesary! Takes more than 40 secs to update the commit in the Github Page.
-
-    for i in range(max_wait):
-        try:
-            res = await client.get(url, headers=headers)
-            if res.status_code == 200:
-                current_sha = res.json().get("sha")
-                if current_sha == expected_sha:
-                    print(f"GitHub file updated (SHA {current_sha[:7]})")
-                    return True
-        except Exception as e:
-            print(f"Poll attempt {i+1} failed: {e}")
-
-    print("Timeout waiting for GitHub to propagate new content.")
-    return False
-
-
-# ═══════════════════════════════════════════════════════════════════
-# 3. Notify FDP Proxy after Github commit
-# ═══════════════════════════════════════════════════════════════════
-async def notify_fdp_proxy(client: httpx.AsyncClient, uri_candidate: str):
-    proxy_url = "https://tools.ostrails.eu/fdp-index-proxy/proxy"
-    proxy_payload = {"clientUrl": uri_candidate}
-    proxy_headers = {"content-type": "application/json"}
-
-    try:
-        resp = await client.post(proxy_url, json=proxy_payload, headers=proxy_headers, timeout=5)
-        resp.raise_for_status()
-        print(f"FDP proxy notified successfully for {uri_candidate}")
     except httpx.HTTPError as e:
-        print(f"FDP proxy notification failed: {e}")
+        raise HTTPException(500, f"GitHub request failed: {str(e)}")
+    except Exception as e:
+        raise HTTPException(500, f"Unexpected error during GitHub commit: {e}")
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 4. FastAPI endpoint
+# GitHub Push Endpoint
 # ═══════════════════════════════════════════════════════════════════
-@app.post("/questionnaire/push")
+
+@app.post(
+    "/questionnaire/push",
+    summary="Push RDF record to GitHub",
+    description="""
+    Upload an RDF record (in Turtle format) to the OSTrails GitHub repository.
+    Automatically creates or updates the corresponding `.ttl` file under its category folder.
+    Returns structured feedback including commit URLs and record identifiers.
+    """,
+)
 async def githubpush(request: Request):
-    rdf_text = await request.body()
-    rdf_text = rdf_text.decode("utf-8")
+    try:
+        rdf_text = (await request.body()).decode("utf-8")
+        if not rdf_text.strip():
+            raise HTTPException(400, "Empty RDF body received.")
 
-    async with httpx.AsyncClient() as client:
-        record_id, category, uri_candidate, url, commit_sha = await commit_rdf_to_github(client, rdf_text)
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            response = await commit_rdf_to_github(client, rdf_text)
+            return JSONResponse(content=response, status_code=200)
 
-        if category.lower() == "test":
-            headers = {
-                "Authorization": f"Bearer {GITHUB_TOKEN}",
-                "Accept": "application/vnd.github+json",
-            }
-            # Wait until GitHub confirms new commit is visible
-            await wait_until_github_updated(client, url, headers, commit_sha, max_wait=10)
-            # Then notify FDP proxy
-            await notify_fdp_proxy(client, uri_candidate)
-
-    return {
-        "Submission": "Done",
-        "Info": (
-            "Your Github submission is located here: https://github.com/OSTrails/assessment-component-metadata-records"
-            "if you submitted a test, check your test record here: https://tools.ostrails.eu/fdp-index/"
-        ),
-    }
+    except HTTPException as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"status": "error", "message": e.detail},
+        )
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "message": f"Unexpected internal error: {e}",
+                "trace": traceback.format_exc().splitlines()[-5:],
+            },
+        )
 
 # ═══════════════════════════════════════════════════════════════════
 # Submit FAIRsharing endpoint
 # ═══════════════════════════════════════════════════════════════════
-@app.post("/questionnaire/submit")
+@app.post("/questionnaire/submit", summary="Submit record to FAIRsharing")
 async def submit_record(body: FairsharingRecordRequest):
-    """
-    Authenticate with FAIRsharing, replace subject/domain URIs with internal IDs,
-    remove missing ones, and clean empty parameters.
-    """
+    """Authenticate with FAIRsharing, resolve subject/domain IDs, and submit the cleaned record."""
 
     async def fetch_internal_id(client: httpx.AsyncClient, iri: str, type_: str):
         if type_ == "subject":

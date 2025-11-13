@@ -12,9 +12,9 @@
 @prefix sio: <http://semanticscience.org/resource/> .
 @prefix adms: <http://www.w3.org/ns/adms#> .
 
-<https://ostrails.github.io/assessment-component-metadata-records/test/TestLicense.ttl> a ftr:Test, dcat:DataService ;
-    dcterms:identifier "https://ostrails.github.io/assessment-component-metadata-records/test/TestLicense.ttl"^^xsd:string ;
-    dcterms:title "FAIR Test - License"^^xsd:string ;
+<https://ostrails.github.io/assessment-component-metadata-records/test/TestLicense2.ttl> a ftr:Test, dcat:DataService ;
+    dcterms:identifier "https://ostrails.github.io/assessment-component-metadata-records/test/TestLicense2.ttl"^^xsd:string ;
+    dcterms:title "FAIR TestX - License"^^xsd:string ;
     rdfs:label "TestLicense"^^xsd:string ;
     vivo:abbreviation "TestLicense"^^xsd:string ;
     dcterms:description """FAIR Test - License description"""^^xsd:string ;
